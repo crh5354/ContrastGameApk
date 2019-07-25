@@ -88,6 +88,29 @@ let getDifferenceFile = function(fileList1, fileList2) {
     return table;
 }
 
+let mkdirsSync = function(dirname) {
+    if (fs.existsSync(dirname)) {
+      return true;
+    } else {
+      if (mkdirsSync(path.dirname(dirname))) {
+        fs.mkdirSync(dirname);
+        return true;
+      }
+    }
+}
+
+let getFileName = function( path ) {
+    let num = 0;
+    for (let i = path.length-1; i >= 0; i--) {
+        let char = path[i];
+        if ( char == '/' ) {
+            num = i;
+            break;
+        }
+    }
+    return path.slice( num+1, path.length );
+}
+
 // 解压apk
 console.log("解压apk");
 newRoot = unzipApk( newRoot );
@@ -106,7 +129,7 @@ let fileTable = getDifferenceFile( newFileTable, oldFileTable );
 
 // 差异文件保存路径
 let tempRoot = tempPath;
-console.log("差异文件夹"+tempRoot);
+console.log("差异文件夹"+tempRoot, fileTable);
 
 // 删除差异文件夹
 if ( fs.existsSync( tempRoot ) ) {
@@ -118,24 +141,35 @@ if ( fs.existsSync( tempRoot ) ) {
 execSync( 'mkdir ' + tempRoot );
 console.log("创建新的差异文件夹");
 
-// 拷贝最新的文件夹到文件夹
-execSync( 'cp -r ' + newRoot + "/ " + tempRoot );
-console.log("拷贝全部资源到差异文件夹");
+// // 方法一
+// // 拷贝最新的文件夹到文件夹
+// execSync( 'cp -r ' + newRoot + "/ " + tempRoot );
+// console.log("拷贝全部资源到差异文件夹");
+// console.log("删除不差异的文件开始");
+// for (let key in newFileTable) {
+//     let tempPath = tempRoot + key.slice( newRoot.length, key.length );
+//     if ( fileTable.hasOwnProperty( key ) ) {
+//         // 垃圾文件需要删除
+//         let fileType = tempPath.split('.').pop();
+//         if ( fileType == 'DS_Store' ) {
+//             execSync( 'rm  -rf ' + tempPath );
+//         }
+//     }else{
+//         execSync( 'rm  -rf ' + tempPath );
+//     }
+// }
+// console.log("删除不差异的文件结束");
+// console.log("结束");
 
-console.log("删除不差异的文件开始");
-// let tempFileTable = getAllFileMD5( getAllFile( tempRoot ) );
-for (let key in newFileTable) {
+// 方法二
+// 拷贝差异文件
+for (let key in fileTable) {
     let tempPath = tempRoot + key.slice( newRoot.length, key.length );
-    if ( fileTable.hasOwnProperty( key ) ) {
-        // 垃圾文件需要删除
-        let fileType = tempPath.split('.').pop();
-        if ( fileType == 'DS_Store' ) {
-            execSync( 'rm  -rf ' + tempPath );
-        }
-    }else{
-        execSync( 'rm  -rf ' + tempPath );
-    }
+    let fileType = tempPath.split('.').pop();
+    let fileName = getFileName( tempPath );
+    let path = tempPath.slice( 0, tempPath.length - fileName.length );
+    mkdirsSync( path );
+    console.log( 'cp ' + key + " " + path );
+    execSync( 'cp ' + key + " " + path );
 }
-console.log("删除不差异的文件结束");
-console.log("结束");
 
